@@ -1,0 +1,23 @@
+{
+  "portal_url": "https://stuttgart.konsentas.de/form/7/?signup_new=1",
+  "category_text": "Ausländerbehörde - Servicepoint",
+  "service_label_text": "Übertragung bestehender Aufenthaltstitel auf neuen Nationalpass (sog. Übertrag)",
+  "option_name": "1 Person",
+  "preferred_start_time": "10:00",
+  "strict_time_filter": false,
+  "telegram_token": "",
+  "telegram_chat_id": "",
+  "details": {
+    "anrede": "Herr",
+    "vorname": "",
+    "nachname": "",
+    "geburtsdatum": "TT.MM.JJJJ",
+    "email": "",
+    "telefon": "",
+    "strasse": "",
+    "nummer": "",
+    "plz": "70173",
+    "ort": "stuttgart",
+    "staatsangehoerigkeit": ""
+  }
+}

@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Termin Hunter</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <span class="dot" id="statusDot"></span>
+        <h1>Termin&nbsp;Hunter</h1>
+      </div>
+      <span class="status-label" id="statusLabel">Not running</span>
+    </header>
+
+    <nav class="tabs">
+      <button class="tab active" data-tab="service">Service</button>
+      <button class="tab" data-tab="details">Your details</button>
+      <button class="tab" data-tab="telegram">Telegram</button>
+      <button class="tab" data-tab="run">Run</button>
+    </nav>
+
+    <main class="panels">
+      <!-- SERVICE -->
+      <section class="panel active" id="panel-service">
+        <label>Portal URL
+          <input type="text" id="portal_url" placeholder="https://stuttgart.konsentas.de/form/7/?signup_new=1" />
+        </label>
+        <label>Category link text <span class="hint">(optional — the clickable heading before the service list)</span>
+          <input type="text" id="category_text" placeholder="Ausländerbehörde - Servicepoint" />
+        </label>
+        <label>Exact service name <span class="hint">(must match the site's text exactly)</span>
+          <input type="text" id="service_label_text" placeholder="Übertragung bestehender Aufenthaltstitel..." />
+        </label>
+        <label>Dropdown option <span class="hint">(only if the service has an "Optionen" dropdown, e.g. "1 Person")</span>
+          <input type="text" id="option_name" placeholder="1 Person" />
+        </label>
+        <label>Preferred earliest time
+          <input type="text" id="preferred_start_time" placeholder="10:00" />
+        </label>
+        <label class="row">
+          <input type="checkbox" id="strict_time_filter" />
+          <span>Only book if a slot at/after that time exists (otherwise take the earliest slot)</span>
+        </label>
+        <label class="row highlight">
+          <input type="checkbox" id="auto_book" />
+          <span><strong>Auto-book</strong> — instantly book the best matching time the moment it's found, no click needed. Strongly recommended for high-demand slots (Ausländerbehörde, driving licence exchange): a manual click can cost you the appointment to someone else's bot.</span>
+        </label>
+      </section>
+
+      <!-- DETAILS -->
+      <section class="panel" id="panel-details">
+        <div class="grid2">
+          <label>Anrede
+            <select id="anrede">
+              <option value="">—</option>
+              <option value="Herr">Herr</option>
+              <option value="Frau">Frau</option>
+              <option value="Divers">Divers</option>
+            </select>
+          </label>
+          <label>Geburtsdatum
+            <input type="text" id="geburtsdatum" placeholder="TT.MM.JJJJ" />
+          </label>
+        </div>
+        <div class="grid2">
+          <label>Vorname <input type="text" id="vorname" /></label>
+          <label>Nachname <input type="text" id="nachname" /></label>
+        </div>
+        <label>Email <input type="email" id="email" /></label>
+        <label>Telefon <input type="text" id="telefon" placeholder="+49..." /></label>
+        <div class="grid2">
+          <label>Straße <input type="text" id="strasse" /></label>
+          <label>Hausnummer <input type="text" id="nummer" /></label>
+        </div>
+        <div class="grid2">
+          <label>PLZ
+            <input type="text" id="plz" placeholder="70173" />
+          </label>
+          <label>Ort <input type="text" id="ort" value="stuttgart" /></label>
+        </div>
+        <label>Staatsangehörigkeit <span class="hint">(only needed for some services)</span>
+          <input type="text" id="staatsangehoerigkeit" />
+        </label>
+      </section>
+
+      <!-- TELEGRAM -->
+      <section class="panel" id="panel-telegram">
+        <p class="hint block">Optional. Set this up to get push notifications on your phone and to be able to pause/resume/pick a time by texting the bot. Leave blank to only use this window.</p>
+        <label>Bot token <span class="hint">(from @BotFather)</span>
+          <input type="text" id="telegram_token" placeholder="123456:ABC-..." />
+        </label>
+        <label>Chat ID
+          <input type="text" id="telegram_chat_id" placeholder="123456789" />
+        </label>
+      </section>
+
+      <!-- RUN -->
+      <section class="panel" id="panel-run">
+        <div class="controls">
+          <button id="btnStart" class="primary">▶ Start</button>
+          <button id="btnPause" class="secondary" disabled>⏸ Pause</button>
+          <button id="btnResume" class="secondary" disabled>↻ Resume</button>
+        </div>
+
+        <div id="timesBox" class="times-box hidden">
+          <p>Times found — pick one:</p>
+          <div id="timesList" class="times-list"></div>
+          <button id="btnSkip" class="ghost">Skip, keep searching</button>
+        </div>
+
+        <div class="log-header">Log</div>
+        <div id="log" class="log"></div>
+        <div id="statsBar" class="stats-bar">Searches: 0 &middot; Consecutive errors: 0/3</div>
+      </section>
+    </main>
+
+    <footer class="savebar">
+      <button id="btnSave" class="ghost">Save settings</button>
+      <button id="btnAbout" class="ghost">About</button>
+      <span id="saveHint" class="hint"></span>
+    </footer>
+  </div>
+
+  <div id="aboutOverlay" class="modal-overlay hidden">
+    <div class="modal">
+      <button id="btnCloseAbout" class="modal-close" aria-label="Close">&times;</button>
+      <h2>Termin&nbsp;Hunter</h2>
+      <p class="about-line">Made with <span class="heart">&hearts;</span> by <strong>Toby Lee</strong> and Claude</p>
+      <a href="#" data-url="https://buymeacoffee.com/asaptobes" class="coffee-btn">&#9749;&nbsp; Like the app? Buy me a coffee</a>
+      <p class="about-line about-help">Need help? <a href="#" data-url="mailto:tobylee87@gmail.com">tobylee87@gmail.com</a></p>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

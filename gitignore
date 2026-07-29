@@ -1,0 +1,7 @@
+dist/
+build/
+*.spec
+installer/output/
+__pycache__/
+*.pyc
+.DS_Store
