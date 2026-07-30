@@ -11,6 +11,7 @@ step, name-based form fields) are preserved here.
 import asyncio
 import logging
 import re
+import time
 from datetime import datetime
 
 from playwright.async_api import async_playwright
@@ -85,6 +86,7 @@ class TerminBot:
         self.browser_lock = asyncio.Lock()
         self._playwright = None
         self._browser = None
+        self._browser_started_at = None
 
     # -- event helper ------------------------------------------------------
     def emit(self, kind, **data):
@@ -110,31 +112,56 @@ class TerminBot:
         self._stop = True
 
     # -- lifecycle -----------------------------------------------------------
+    RESTART_INTERVAL_SECONDS = 4 * 60 * 60  # restart the browser every 4 hours during idle periods
+
+    async def _launch_browser(self):
+        # Use the user's installed Chrome instead of downloading a
+        # separate ~300MB Chromium — keeps the packaged app small.
+        try:
+            self._browser = await self._playwright.chromium.launch(channel="chrome", headless=False)
+        except Exception as e:
+            self.log(
+                "Couldn't find Google Chrome installed on this computer. "
+                "Termin Hunter uses your existing Chrome instead of bundling its own "
+                "browser (keeps the app small) — please install Chrome from "
+                "google.com/chrome and restart the app."
+            )
+            self.emit("paused", reason="Google Chrome not found")
+            raise
+        context = await self._browser.new_context()
+        self.browser_page = await context.new_page()
+        self._browser_started_at = time.monotonic()
+
+    async def _restart_browser(self):
+        """
+        Fully close and relaunch Chrome (not just reload the page). Driving
+        the same browser process through hundreds of full page loads of a
+        JS-heavy SPA over many hours (every 60s, overnight = 400+ reloads)
+        can accumulate memory that a page reload alone doesn't release —
+        a real Chrome process restart is the reliable way to reclaim it.
+        Only called during idle searching, never mid-booking.
+        """
+        self.log("Restarting the browser to keep memory usage in check (routine, not an error)...")
+        try:
+            await self._browser.close()
+        except Exception:
+            pass
+        await self._launch_browser()
+
     async def run(self):
         async with async_playwright() as p:
             self._playwright = p
-            # Use the user's installed Chrome instead of downloading a
-            # separate ~300MB Chromium — keeps the packaged app small.
-            try:
-                self._browser = await p.chromium.launch(channel="chrome", headless=False)
-            except Exception as e:
-                self.log(
-                    "Couldn't find Google Chrome installed on this computer. "
-                    "Termin Hunter uses your existing Chrome instead of bundling its own "
-                    "browser (keeps the app small) — please install Chrome from "
-                    "google.com/chrome and restart the app."
-                )
-                self.emit("paused", reason="Google Chrome not found")
-                raise
-
-            context = await self._browser.new_context()
-            self.browser_page = await context.new_page()
+            await self._launch_browser()
 
             self.log("Bot started. Searching...")
             while not self._stop:
                 if self.paused or self.appointment_found or self.booking_in_progress:
                     await asyncio.sleep(5)
                     continue
+
+                if time.monotonic() - self._browser_started_at > self.RESTART_INTERVAL_SECONDS:
+                    async with self.browser_lock:
+                        await self._restart_browser()
 
                 async with self.browser_lock:
                     self.total_searches += 1
