@@ -46,6 +46,24 @@ computer; nothing is sent anywhere except the portal you're booking on
    instead so you can check the browser and finish it by hand — it won't
    touch the browser again until you click **Resume**.
 
+## Code signing policy
+
+Termin Hunter's Windows installer is built automatically from this
+repository's source by [GitHub Actions](.github/workflows/build.yml) —
+nothing is ever hand-built on a personal machine and uploaded. Windows
+code signing for this project is provided for free by
+[SignPath.io](https://signpath.io), using a certificate from
+[SignPath Foundation](https://signpath.org), for qualifying open-source
+projects.
+
+- **Author / reviewer / approver:** [Toby Lee](https://github.com/asaptobes)
+  (sole maintainer).
+- **Privacy:** Termin Hunter collects no telemetry and phones home to no
+  one. The only data it handles is what you type into its own config form
+  (stored locally at `~/.termin-hunter/config.json`) and whatever you send
+  to the Konsentas booking portal or your own Telegram bot, if you set one
+  up.
+
 ## Building it yourself / contributing
 
 See [BUILDING.md](BUILDING.md) for the developer setup and build process.
