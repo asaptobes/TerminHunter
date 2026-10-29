@@ -79,6 +79,7 @@ class TerminBot:
         self.booking_in_progress = False
         self.available_times = []
         self.consecutive_errors = 0
+        self.consecutive_restarts = 0
         self.total_searches = 0
         self._stop = False
 
@@ -113,6 +114,7 @@ class TerminBot:
 
     # -- lifecycle -----------------------------------------------------------
     RESTART_INTERVAL_SECONDS = 4 * 60 * 60  # restart the browser every 4 hours during idle periods
+    MAX_AUTO_RESTARTS = 3  # consecutive browser restarts to try before actually pausing
 
     async def _launch_browser(self):
         # Use the user's installed Chrome instead of downloading a
@@ -179,13 +181,48 @@ class TerminBot:
                             await self.browser_page.wait_for_timeout(1500)
                             await self._search_once()
                         self.consecutive_errors = 0
+                        self.consecutive_restarts = 0
                     except Exception as e:
                         self.consecutive_errors += 1
                         self.log(f"Search error: {e}")
                         if self.consecutive_errors >= 3:
-                            self.paused = True
-                            self.emit("paused", reason=f"{self.consecutive_errors} failed attempts in a row: {e}")
-                    self.emit("stats", total_searches=self.total_searches, consecutive_errors=self.consecutive_errors)
+                            self.consecutive_errors = 0
+                            self.consecutive_restarts += 1
+                            # Three failures in a row (each of which already
+                            # survived one reload-and-retry) is almost always
+                            # a stale/detached browser session — the exact
+                            # thing closing and relaunching Chrome by hand
+                            # fixes. Do that automatically instead of just
+                            # giving up, same as the periodic memory-cleanup
+                            # restart. Only actually pause and ask for help
+                            # if several full restarts in a row still don't
+                            # clear it, since that points to something a
+                            # restart can't fix (bad config, site change).
+                            if self.consecutive_restarts <= self.MAX_AUTO_RESTARTS:
+                                self.log(
+                                    f"3 failed attempts in a row — restarting the browser "
+                                    f"automatically (attempt {self.consecutive_restarts}/"
+                                    f"{self.MAX_AUTO_RESTARTS}) instead of stopping..."
+                                )
+                                try:
+                                    await self._restart_browser()
+                                except Exception as restart_error:
+                                    self.log(f"Browser restart failed: {restart_error}")
+                            else:
+                                self.paused = True
+                                self.emit(
+                                    "paused",
+                                    reason=(
+                                        f"Still failing after {self.consecutive_restarts} automatic "
+                                        f"browser restarts — this looks like more than a stale "
+                                        f"browser session. Last error: {e}"
+                                    ),
+                                )
+                    self.emit(
+                        "stats",
+                        total_searches=self.total_searches,
+                        consecutive_errors=self.consecutive_errors,
+                    )
 
                 await asyncio.sleep(60)
 
