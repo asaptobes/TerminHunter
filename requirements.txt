@@ -2,3 +2,7 @@ pywebview>=5.0
 playwright>=1.45
 python-telegram-bot>=21.0
 pyinstaller>=6.0
+# setuptools 82.0+ (Feb 2026) removed pkg_resources, which PyInstaller's
+# altgraph dependency still imports — pin below that until PyInstaller
+# updates to not need it.
+setuptools<82

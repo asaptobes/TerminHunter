@@ -1,0 +1,85 @@
+name: Build Windows installer
+
+# Builds TerminHunter-Setup.exe on a GitHub-hosted Windows runner.
+#
+# This exists for two reasons:
+#   1. So nobody has to trust a manually-built exe from someone's own PC.
+#   2. SignPath Foundation (free code signing for qualifying open-source
+#      projects) requires the signed artifact to come from a verifiable
+#      CI build, not a local build — this workflow is that CI build.
+#
+# Every push/PR builds and uploads the installer as a workflow artifact
+# (handy for testing a branch). Pushing a tag like "v1.0.2" additionally
+# attaches it to a new GitHub Release with a SHA256 checksum.
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Build TerminHunter.exe with PyInstaller
+        run: python -m PyInstaller TerminHunter.spec
+
+      - name: Set installer version from tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}" -replace '^v', ''
+          (Get-Content installer\windows_installer.iss) `
+            -replace '#define MyAppVersion ".*"', "#define MyAppVersion ""$version""" |
+            Set-Content installer\windows_installer.iss
+
+      - name: Install Inno Setup
+        run: choco install innosetup -y --no-progress
+
+      - name: Build installer with Inno Setup
+        shell: pwsh
+        run: |
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer\windows_installer.iss
+
+      - name: Compute SHA256 checksum
+        shell: pwsh
+        run: |
+          $hash = Get-FileHash -Algorithm SHA256 installer\output\TerminHunter-Setup.exe
+          "$($hash.Hash.ToLower())  TerminHunter-Setup.exe" | Set-Content installer\output\TerminHunter-Setup.exe.sha256
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TerminHunter-Setup
+          path: |
+            installer/output/TerminHunter-Setup.exe
+            installer/output/TerminHunter-Setup.exe.sha256
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: pwsh
+        run: |
+          gh release create "${{ github.ref_name }}" `
+            installer/output/TerminHunter-Setup.exe `
+            installer/output/TerminHunter-Setup.exe.sha256 `
+            --title "${{ github.ref_name }}" `
+            --generate-notes
