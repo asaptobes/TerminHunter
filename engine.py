@@ -499,14 +499,25 @@ class TerminBot:
             await self.safe_click(page, [f'text="{cfg["category_text"]}"'], "category menu")
             await page.wait_for_timeout(1000)
 
-        service_label_text = cfg["service_label_text"]
+        # The site's own HTML has occasionally shipped a stray leading/
+        # trailing space inside data-process-name (confirmed live on at
+        # least one "Führerscheinstelle" service — a sitewide authoring
+        # quirk, not something a user's config can cause). An exact-match
+        # CSS attribute selector breaks on that invisible whitespace, so
+        # match via XPath normalize-space() instead, which collapses and
+        # trims whitespace in the attribute before comparing.
+        service_label_text = cfg["service_label_text"].strip()
         if cfg.get("option_name"):
-            service_container = page.locator(f'div[data-process-name="{service_label_text}"]')
+            service_container = page.locator(
+                f'xpath=//div[normalize-space(@data-process-name)="{service_label_text}"]'
+            )
             await self.safe_click(service_container.locator('button.dropdown-toggle'), None, "service dropdown")
             await page.wait_for_timeout(500)
             await self.safe_click(service_container.locator(f'a[data-option-name="{cfg["option_name"]}"]'), None, "service option")
 
-        service_label = page.locator(f'label[data-process-name="{service_label_text}"]')
+        service_label = page.locator(
+            f'xpath=//label[normalize-space(@data-process-name)="{service_label_text}"]'
+        )
         await self.safe_click(service_label, None, "service radio button")
 
         outcome = await self.advance_to_calendar()
